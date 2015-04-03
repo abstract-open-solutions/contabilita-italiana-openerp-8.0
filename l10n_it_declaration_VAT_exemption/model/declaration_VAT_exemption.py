@@ -22,174 +22,215 @@ from openerp import models, fields, api
 from openerp.osv import osv
 
 
-class res_partner(models.Model):
+class ResPartner(models.Model):
     _inherit = "res.partner"
     _description = "Declaration declaration of VAT exemption"
 
-    #esenzione iva
-    declaration_exemption_vat = fields.Char('N.Decl.VAT Exemption customer',
-        help="Number Declaration VAT Exemption customer")
+    # esenzione iva
+    declaration_exemption_vat = fields.Char(
+        'N.Decl.VAT Exemption customer',
+        help="Number Declaration VAT Exemption customer"
+    )
     protocol_declaration_exemption_vat = fields.Char(
         'Internal protocol VAT exemption',
-        help="Number of internal protocol for the_registration of the declaration of VAT exemption")
-    date_declaration_exemption_vat = fields.Date('Declaration Date',
-        help="Date of declaration of the customer for the VAT exemption")
-    date_internal_protocol_exemption_vat = fields.Date('Date internal protocol',
-        help="Date of internal protocol for the registration of the declaration of VAT exemption")
-res_partner()
+        help="Number of internal protocol for the_registration of the \
+            declaration of VAT exemption")
+    date_declaration_exemption_vat = fields.Date(
+        'Declaration Date',
+        help="Date of declaration of the customer for the VAT exemption"
+    )
+    date_internal_protocol_exemption_vat = fields.Date(
+        'Date internal protocol',
+        help="Date of internal protocol for the registration of the \
+            declaration of VAT exemption"
+    )
 
 
-
-class account_invoice(models.Model):
+class AccountInvoice(models.Model):
     _inherit = "account.invoice"
-    #invoice directly
 
+    declaration_exemption_vat = fields.Char(
+        'N.Decl.VAT Exemption customer',
+        help="Number Declaration VAT Exemption customer"
+    )
+    protocol_declaration_exemption_vat = fields.Char(
+        'Internal protocol VAT exemption',
+        help="Number of internal protocol for the registration of the \
+            declaration of VAT exemption"
+    )
+    date_declaration_exemption_vat = fields.Date(
+        'Declaration Date',
+        help="Date of declaration of the customer for the VAT exemption"
+    )
+    date_internal_protocol_exemption_vat = fields.Date(
+        'Date internal protocol',
+        help="Date of internal protocol for the registration of the \
+        declaration of VAT exemption"
+    )
+
+    # invoice directly
     @api.multi
     def onchange_partner_id(self, type, partner_id, date_invoice=False,
-            payment_term=False, partner_bank_id=False, company_id=False):
+                            payment_term=False, partner_bank_id=False,
+                            company_id=False):
         if not partner_id:
-            return {'value': {
-            'account_id': False,
-            'payment_term': False,
-            'declaration_exemption_vat': '',
-            'protocol_declaration_exemption_vat': '',
-            'date_declaration_exemption_vat': '',
-            'date_internal_protocol_exemption_vat': '',
+            return {
+                'value': {
+                    'account_id': False,
+                    'payment_term': False,
+                    'declaration_exemption_vat': '',
+                    'protocol_declaration_exemption_vat': '',
+                    'date_declaration_exemption_vat': '',
+                    'date_internal_protocol_exemption_vat': '',
+                }
             }
-        }
 
-        result =  super(account_invoice, self).onchange_partner_id(type, partner_id,
-            date_invoice=False,payment_term=False, partner_bank_id=False, company_id=False)
-        valori=result.get('value',{})
-
+        _super = super(AccountInvoice, self)
+        result = _super.onchange_partner_id(
+            type, partner_id, date_invoice=False, payment_term=False,
+            partner_bank_id=False, company_id=False
+        )
+        valori = result.get('value', {})
         partner = self.env['res.partner'].browse(partner_id)
         if partner.parent_id:
             partner = partner.parent_id
         if partner.declaration_exemption_vat:
-            valori['declaration_exemption_vat']=partner.declaration_exemption_vat
+            valori['declaration_exemption_vat'] = \
+                partner.declaration_exemption_vat
         else:
-            valori['declaration_exemption_vat']=''
+            valori['declaration_exemption_vat'] = ''
         if partner.protocol_declaration_exemption_vat:
-            valori['protocol_declaration_exemption_vat']=partner.protocol_declaration_exemption_vat
+            valori['protocol_declaration_exemption_vat'] = \
+                partner.protocol_declaration_exemption_vat
         else:
-            valori['protocol_declaration_exemption_vat']=''
+            valori['protocol_declaration_exemption_vat'] = ''
         if partner.date_declaration_exemption_vat:
-            valori['date_declaration_exemption_vat']=partner.date_declaration_exemption_vat
+            valori['date_declaration_exemption_vat'] = \
+                partner.date_declaration_exemption_vat
         else:
-            valori['date_declaration_exemption_vat']=''
+            valori['date_declaration_exemption_vat'] = ''
         if partner.date_internal_protocol_exemption_vat:
-            valori['date_internal_protocol_exemption_vat']=partner.date_internal_protocol_exemption_vat
+            valori['date_internal_protocol_exemption_vat'] = \
+                partner.date_internal_protocol_exemption_vat
         else:
-            valori['date_internal_protocol_exemption_vat']=''
+            valori['date_internal_protocol_exemption_vat'] = ''
         return {'value': valori}
 
 
-    declaration_exemption_vat = fields.Char('N.Decl.VAT Exemption customer',
-        help="Number Declaration VAT Exemption customer")
-    protocol_declaration_exemption_vat = fields.Char('Internal protocol VAT exemption',
-        help="Number of internal protocol for the registration of the declaration of VAT exemption")
-    date_declaration_exemption_vat = fields.Date('Declaration Date',
-        help="Date of declaration of the customer for the VAT exemption")
-    date_internal_protocol_exemption_vat = fields.Date('Date internal protocol',
-        help="Date of internal protocol for the registration of the declaration of VAT exemption")
-
-
-class stock_picking(osv.osv):
-    #fatturazione da ordine di consegna
+class StockPicking(osv.osv):
     _inherit = "stock.picking"
 
-    def action_invoice_create(self, cr, uid, ids, journal_id=False, group=False, type='out_invoice', context=None):
-        res=super(stock_picking, self).action_invoice_create(cr, uid, ids, journal_id=journal_id, group=group, type='out_invoice', context=context)
+    # fatturazione da ordine di consegna
+    def action_invoice_create(self, cr, uid, ids, journal_id=False,
+                              group=False, type='out_invoice', context=None):
+        _super = super(StockPicking, self)
+        res = _super.action_invoice_create(
+            cr, uid, ids, journal_id=journal_id, group=group, type=type,
+            context=context)
         for id_invoice in res:
-            invoice = self.pool.get('account.invoice').browse(cr, uid, id_invoice)
-            vals={}
+            invoice = self.pool.get('account.invoice').browse(
+                cr, uid, id_invoice
+            )
+            vals = {}
             if invoice.partner_id.parent_id:
                 partner = invoice.partner_id.parent_id
             else:
                 partner = invoice.partner_id
             if partner.declaration_exemption_vat:
-                vals['declaration_exemption_vat']=partner.declaration_exemption_vat
+                vals['declaration_exemption_vat'] = \
+                    partner.declaration_exemption_vat
             if partner.protocol_declaration_exemption_vat:
-                vals['protocol_declaration_exemption_vat']=partner.protocol_declaration_exemption_vat
+                vals['protocol_declaration_exemption_vat'] = \
+                    partner.protocol_declaration_exemption_vat
             if partner.date_declaration_exemption_vat:
-                vals['date_declaration_exemption_vat']=partner.date_declaration_exemption_vat
+                vals['date_declaration_exemption_vat'] = \
+                    partner.date_declaration_exemption_vat
             if partner.date_internal_protocol_exemption_vat:
-                vals['date_internal_protocol_exemption_vat']=partner.date_internal_protocol_exemption_vat
+                vals['date_internal_protocol_exemption_vat'] = \
+                    partner.date_internal_protocol_exemption_vat
             invoice.write(vals)
-
         return res
 
 
-
-
-class sale_order(osv.osv):
+class SaleOrder(osv.osv):
     _inherit = "sale.order"
-    #fatturazione da ordine di vendita
 
+    # fatturazione da ordine di vendita
     def _prepare_invoice(self, cr, uid, order, lines, context=None):
-        invoice_vals=super(sale_order, self)._prepare_invoice( cr, uid, order, lines, context=None)
-
-        partner = self.pool.get('res.partner').browse(cr, uid, invoice_vals['partner_id'])
+        _super = super(SaleOrder, self)
+        invoice_vals = _super._prepare_invoice(
+            cr, uid, order, lines, context=None
+        )
+        partner = self.pool.get('res.partner').browse(
+            cr, uid, invoice_vals['partner_id']
+        )
         if partner.parent_id:
             partner = partner.parent_id
-
         if partner.declaration_exemption_vat:
-            invoice_vals['declaration_exemption_vat']=partner.declaration_exemption_vat
+            invoice_vals['declaration_exemption_vat'] = \
+                partner.declaration_exemption_vat
         if partner.protocol_declaration_exemption_vat:
-            invoice_vals['protocol_declaration_exemption_vat']=partner.protocol_declaration_exemption_vat
+            invoice_vals['protocol_declaration_exemption_vat'] = \
+                partner.protocol_declaration_exemption_vat
         if partner.date_declaration_exemption_vat:
-            invoice_vals['date_declaration_exemption_vat']=partner.date_declaration_exemption_vat
+            invoice_vals['date_declaration_exemption_vat'] = \
+                partner.date_declaration_exemption_vat
         if partner.date_internal_protocol_exemption_vat:
-            invoice_vals['date_internal_protocol_exemption_vat']=partner.date_internal_protocol_exemption_vat
-
+            invoice_vals['date_internal_protocol_exemption_vat'] = \
+                partner.date_internal_protocol_exemption_vat
         return invoice_vals
-sale_order()
 
 
-class sale_advance_payment_inv(osv.osv_memory):
+class SaleAdvancePaymentInv(osv.osv_memory):
     _inherit = "sale.advance.payment.inv"
-    #fatturazione in percentuale o a valore
+
+    # fatturazione in percentuale o a valore
     def _prepare_advance_invoice_vals(self, cr, uid, ids, context=None):
-        res=super(sale_advance_payment_inv, self)._prepare_advance_invoice_vals(cr, uid, ids, context)
+        _super = super(SaleAdvancePaymentInv, self)
+        res = _super._prepare_advance_invoice_vals(cr, uid, ids, context)
         for sel_order in res:
             invoice = sel_order[1]
-            partner_id=invoice['partner_id']
-            
+            partner_id = invoice['partner_id']
             partner = self.pool.get('res.partner').browse(cr, uid, partner_id)
             if partner.parent_id:
                 partner = partner.parent_id
-                
             if partner.declaration_exemption_vat:
-                invoice['declaration_exemption_vat']=partner.declaration_exemption_vat
+                invoice['declaration_exemption_vat'] = \
+                    partner.declaration_exemption_vat
             if partner.protocol_declaration_exemption_vat:
-                invoice['protocol_declaration_exemption_vat']=partner.protocol_declaration_exemption_vat
+                invoice['protocol_declaration_exemption_vat'] = \
+                    partner.protocol_declaration_exemption_vat
             if partner.date_declaration_exemption_vat:
-                invoice['date_declaration_exemption_vat']=partner.date_declaration_exemption_vat
+                invoice['date_declaration_exemption_vat'] = \
+                    partner.date_declaration_exemption_vat
             if partner.date_internal_protocol_exemption_vat:
-                invoice['date_internal_protocol_exemption_vat']=partner.date_internal_protocol_exemption_vat    
+                invoice['date_internal_protocol_exemption_vat'] = \
+                    partner.date_internal_protocol_exemption_vat
         return res
-sale_advance_payment_inv()   
 
 
-class sale_order_line_make_invoice(osv.osv_memory):
+class SaleOrderLineMakeInvoice(osv.osv_memory):
     _inherit = "sale.order.line.make.invoice"
-    #fatturazione righe ordine
+
+    # fatturazione righe ordine
     def _prepare_invoice(self, cr, uid, order, lines, context=None):
-        res=super(sale_order_line_make_invoice, self)._prepare_invoice(cr, uid, order, lines, context)
-        
-        partner = self.pool.get('res.partner').browse(cr, uid, res['partner_id'])
+        _super = super(SaleOrderLineMakeInvoice, self)
+        res = _super._prepare_invoice(cr, uid, order, lines, context)
+        partner = self.pool.get('res.partner').browse(
+            cr, uid, res['partner_id']
+        )
         if partner.parent_id:
-           partner = partner.parent_id
-                
+            partner = partner.parent_id
         if partner.declaration_exemption_vat:
-            res['declaration_exemption_vat']=partner.declaration_exemption_vat
+            res['declaration_exemption_vat'] = \
+                partner.declaration_exemption_vat
         if partner.protocol_declaration_exemption_vat:
-            res['protocol_declaration_exemption_vat']=partner.protocol_declaration_exemption_vat
+            res['protocol_declaration_exemption_vat'] = \
+                partner.protocol_declaration_exemption_vat
         if partner.date_declaration_exemption_vat:
-            res['date_declaration_exemption_vat']=partner.date_declaration_exemption_vat
+            res['date_declaration_exemption_vat'] = \
+                partner.date_declaration_exemption_vat
         if partner.date_internal_protocol_exemption_vat:
-            res['date_internal_protocol_exemption_vat']=partner.date_internal_protocol_exemption_vat
-        
+            res['date_internal_protocol_exemption_vat'] = \
+                partner.date_internal_protocol_exemption_vat
         return res
-sale_order_line_make_invoice()     
-     
